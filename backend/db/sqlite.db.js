@@ -54,6 +54,192 @@ exports.getAllLocations = async() => {
         return []
     }
 }
+exports.getScoreboard = async (fcs) => {
+    const db = await this.getSqlite();
+    let scoreBoards = [];
+    let products = [];
+    let query = `SELECT * FROM Products LEFT JOIN Locations on Products.Asin=Locations.Asin`;
+    const stmt = db.prepare( query );
+    for (const element of stmt.iterate()) {
+        const {Asin1, ...rest} = element
+        products.push(rest)
+    }
+    fcs.forEach(fc => {
+        const _products = products.filter(el => el['Fc'] === fc);
+        let array = [..._products];
+        array = array.filter(el => !!el['Price'])
+        let average_price = array.length? array.map(el => el['Price']).reduce((a, b) => a + b, 0) / array.length: 0;
+        average_price = parseInt(average_price * 10000) / 10000;
+        array = [..._products];
+        array = array.filter(el => !!el['Shortest'])
+        let average_shortest = array.length? array.map(el => el['Shortest']).reduce((a, b) => a + b, 0) / array.length: 0;
+        average_shortest = parseInt(average_shortest * 10000) / 10000;
+
+        array = [..._products];
+        array = array.filter(el => !!el['Median'])
+        let average_median = array.length? array.map(el => el['Median']).reduce((a, b) => a + b, 0) / array.length: 0;
+        average_median = parseInt(average_median * 10000) / 10000;
+
+        array = [..._products];
+        array = array.filter(el => !!el['Longest'])
+        let average_longest = array.length? array.map(el => el['Longest']).reduce((a, b) => a + b, 0) / array.length: 0;
+        average_longest = parseInt(average_longest * 10000) / 10000;
+
+        array = [..._products];
+        array = array.filter(el => !!el['Weight'])
+        let average_weight = array.length? array.map(el => el['Weight']).reduce((a, b) => a + b, 0) / array.length: 0;
+        average_weight = parseInt(average_weight * 10000) / 10000;
+
+        array = [..._products];
+        array = array.filter(el => !!el['NumberOfSellers'])
+        let average_nos = array.length? array.map(el => el['NumberOfSellers']).reduce((a, b) => a + b, 0) / array.length: 0;
+        average_nos = parseInt(average_nos * 10000) / 10000;
+
+        array = [..._products];
+        array = array.filter(el => !!el['NumberOfFbaSellers'])
+        let average_nofs = array.length? array.map(el => el['NumberOfFbaSellers']).reduce((a, b) => a + b, 0) / array.length: 0;
+        average_nofs = parseInt(average_nofs * 10000) / 10000;
+
+        array = [..._products];
+        array = array.filter(el => !!el['NumberOfUsedLikeNewOffers'])
+        let average_noulno = array.length? array.map(el => el['NumberOfUsedLikeNewOffers']).reduce((a, b) => a + b, 0) / array.length: 0;
+        average_noulno = parseInt(average_noulno * 10000) / 10000;
+        
+        scoreBoards.push([
+            fc, average_price, average_shortest, average_median, average_longest, average_weight, average_nos, average_nofs, average_noulno 
+        ])
+        
+    }) 
+    return scoreBoards;
+}
+exports.getChartData = async (fc) => {
+    const db = await this.getSqlite();
+    let products = [];
+    let query = `SELECT * FROM Products LEFT JOIN Locations on Products.Asin=Locations.Asin WHERE Locations.Fc='${fc}'`;
+    const stmt = db.prepare( query );
+    for (const element of stmt.iterate()) {
+        const {Asin1, ...rest} = element
+        products.push(rest)
+    }
+    let dates = [...new Set(products.map(el => el['Date']))]
+    dates.sort((a, b) => {
+        const aM = moment(a).toDate().getTime();
+        const bM = moment(b).toDate().getTime();
+        if(aM > bM) return 1;
+        return -1
+    })
+    dates = dates.filter((el, index) => !!el && index < 5);
+    products = products.filter(el => dates.includes(el['Date']));
+    
+    let prices  =[];
+    let shortests = [];
+    let longests = [];
+    let medians = [];
+    let weights = [];
+    let noss = [];
+    let nofss = [];
+    let noulnos = []
+    dates.forEach(date => {
+        let array = [...products];
+        array = array.filter(el => !!el['Price'] && el['Date'] === date);
+        let allPrice = array.map(el => el['Price']).reduce((a, b) => a + b, 0);
+        prices.push(parseInt(allPrice));
+        
+        array = [...products]
+        array = array.filter(el => !!el['Shortest'] && el['Date'] === date);
+        let allShortest = array.map(el => el['Shortest']).reduce((a, b) => a + b, 0);
+        shortests.push(parseInt(allShortest));
+
+        array = [...products]
+        array = array.filter(el => !!el['Median'] && el['Date'] === date);
+        let allMedian = array.map(el => el['Median']).reduce((a, b) => a + b, 0);
+        medians.push(parseInt(allMedian));
+
+        array = [...products]
+        array = array.filter(el => !!el['Longest'] && el['Date'] === date);
+        let allLongest = array.map(el => el['Longest']).reduce((a, b) => a + b, 0);
+        longests.push(parseInt(allLongest))
+
+        array = [...products]
+        array = array.filter(el => !!el['Weight'] && el['Date'] === date);
+        let allWeight = array.map(el => el['Weight']).reduce((a, b) => a + b, 0);
+        weights.push(parseInt(allWeight))
+
+        array = [...products]
+        array = array.filter(el => !!el['NumberOfSellers'] && el['Date'] === date);
+        let allNumberOfSellers = array.map(el => el['NumberOfSellers']).reduce((a, b) => a + b, 0);
+        noss.push(parseInt(allNumberOfSellers))
+
+        array = [...products]
+        array = array.filter(el => !!el['NumberOfFbaSellers'] && el['Date'] === date);
+        let allNumberOfFbaSellers = array.map(el => el['NumberOfFbaSellers']).reduce((a, b) => a + b, 0);
+        nofss.push(parseInt(allNumberOfFbaSellers))
+
+        array = [...products]
+        array = array.filter(el => !!el['NumberOfUsedLikeNewOffers'] && el['Date'] === date);
+        let allNumberOfUsedLikeNewOffers = array.map(el => el['NumberOfUsedLikeNewOffers']).reduce((a, b) => a + b, 0);
+        noulnos.push(parseInt(allNumberOfUsedLikeNewOffers))
+
+    });
+    return {
+        price: {
+            series: [{
+                name: 'Price',
+                data: prices
+            }],
+            categories: dates
+        },
+        shortest: {
+            series: [{
+                name: 'Shortest',
+                data: shortests
+            }],
+            categories: dates
+        },
+        median: {
+            series: [{
+                name: 'Median',
+                data: medians
+            }],
+            categories: dates
+        },
+        longest: {
+            series: [{
+                name: 'Longest',
+                data: longests
+            }],
+            categories: dates
+        },
+        weight: {
+            series: [{
+                name: 'Weight',
+                data: weights
+            }],
+            categories: dates
+        },
+        numberOfSellers: {
+            series: [{
+                name: 'NumberOfSellers',
+                data: noss
+            }],
+            categories: dates
+        },
+        numberOfFbaSellers: {
+            series: [{
+                name: 'NumberOfFbaSellers',
+                data: nofss
+            }],
+            categories: dates
+        },
+        numberOfUsedLikeNewOffers: {
+            series: [{
+                name: 'NumberOfUsedLikeNewOffers',
+                data: noulnos
+            }],
+            categories: dates
+        }
+    }
+}
 exports.getResult = async(fc, from, to) => {
     const db = await this.getSqlite()
     if(!!db) {
@@ -75,35 +261,14 @@ exports.getResult = async(fc, from, to) => {
                 return moment(el['Date']).isBefore(to) || moment(el['Date']).isSame(to) ; 
             })
         }
-        /**
-         * HP, LP, AP
-         *  LSD, SSD, ASD
-         * LMD, SMD, AMD
-         * LLD , SLD, ALD
-         * HW, LW, AW,
-         * HNOS, LNOS, ANOS
-         * HNOFS, LNOFS, ANOFS
-         * HNOULNO, LNOULNO, ANOULNO,
-         * HT, LT, AT
-         * PRODUCT_GROUP
-         * BINDINGS
-         * CATEGORY
-         * SUBCATEGORY
-         * SUBCATEGORY3
-         * SUBCATEGORY4
-         * SUBCATEGORY5
-         * SUBCATEGORY6
-         * SUBCATEGORY7
-         * BRAND
-         */
-    
+        
     let array = [..._products];
     array = array.filter(el => !!el['Price'])
     array.sort((a, b) => a['Price'] < b['Price']? 1: -1);
     let HP = array.filter((el, index) => !!el && index < 5).map(el => el['Price']);
     array = array.reverse();
     let LP = array.filter((el, index) => !!el && index < 5).map(el => el['Price']);
-    let AP = array.map(el => el['Price']).reduce((a, b) => a + b, 0) / array.length;
+    let AP = array.length? array.map(el => el['Price']).reduce((a, b) => a + b, 0) / array.length: 0;
     AP = parseInt(AP * 10000) / 10000;
 
     array = [..._products];
@@ -112,7 +277,7 @@ exports.getResult = async(fc, from, to) => {
     let LSD = array.filter((el, index) => !!el && index < 5).map(el => el['Shortest']);
     array = array.reverse();
     let SSD = array.filter((el, index) => !!el && index < 5).map(el => el['Shortest']);
-    let ASD = array.map(el => el['Shortest']).reduce((a, b) => a + b, 0) / array.length;
+    let ASD = array.length? array.map(el => el['Shortest']).reduce((a, b) => a + b, 0) / array.length: 0;
     ASD = parseInt(ASD * 10000) / 10000;
     
     array = [..._products];
@@ -121,7 +286,7 @@ exports.getResult = async(fc, from, to) => {
     let LMD = array.filter((el, index) => !!el && index < 5).map(el => el['Median']);
     array = array.reverse();
     let SMD = array.filter((el, index) => !!el && index < 5).map(el => el['Median']);
-    let AMD = array.map(el => el['Median']).reduce((a, b) => a + b, 0) / array.length;
+    let AMD = array.length? array.map(el => el['Median']).reduce((a, b) => a + b, 0) / array.length: 0;
     AMD = parseInt(AMD * 10000) / 10000;
 
     array = [..._products];
@@ -130,7 +295,7 @@ exports.getResult = async(fc, from, to) => {
     let LLD = array.filter((el, index) => !!el && index < 5).map(el => el['Longest']);
     array = array.reverse();
     let SLD = array.filter((el, index) => !!el && index < 5).map(el => el['Longest']);
-    let ALD = array.map(el => el['Longest']).reduce((a, b) => a + b, 0) / array.length;
+    let ALD = array.length? array.map(el => el['Longest']).reduce((a, b) => a + b, 0) / array.length: 0;
     ALD = parseInt(ALD * 10000) / 10000;
 
     array = [..._products];
@@ -139,7 +304,7 @@ exports.getResult = async(fc, from, to) => {
     let HW = array.filter((el, index) => !!el && index < 5).map(el => el['Weight']);
     array = array.reverse();
     let LW = array.filter((el, index) => !!el && index < 5).map(el => el['Weight']);
-    let AW = array.map(el => el['Weight']).reduce((a, b) => a + b, 0) / array.length;
+    let AW = array.length? array.map(el => el['Weight']).reduce((a, b) => a + b, 0) / array.length: 0;
     AW = parseInt(AW * 10000) / 10000;
     
     array = [..._products];
@@ -148,7 +313,7 @@ exports.getResult = async(fc, from, to) => {
     let HNOS = array.filter((el, index) => !!el && index < 5).map(el => el['NumberOfSellers']);
     array = array.reverse();
     let LNOS = array.filter((el, index) => !!el && index < 5).map(el => el['NumberOfSellers']);
-    let ANOS = array.map(el => el['NumberOfSellers']).reduce((a, b) => a + b, 0) / array.length;
+    let ANOS = array.length? array.map(el => el['NumberOfSellers']).reduce((a, b) => a + b, 0) / array.length: 0;
     ANOS = parseInt(ANOS * 10000) / 10000;
 
     array = [..._products];
@@ -157,7 +322,7 @@ exports.getResult = async(fc, from, to) => {
     let HNOFS = array.filter((el, index) => !!el && index < 5).map(el => el['NumberOfFbaSellers']);
     array = array.reverse();
     let LNOFS = array.filter((el, index) => !!el && index < 5).map(el => el['NumberOfFbaSellers']);
-    let ANOFS = array.map(el => el['NumberOfFbaSellers']).reduce((a, b) => a + b, 0) / array.length;
+    let ANOFS = array.length? array.map(el => el['NumberOfFbaSellers']).reduce((a, b) => a + b, 0) / array.length:0;
     ANOFS = parseInt(ANOFS * 10000) / 10000;
 
     array = [..._products];
@@ -166,17 +331,35 @@ exports.getResult = async(fc, from, to) => {
     let HNOULNO = array.filter((el, index) => !!el && index < 5).map(el => el['NumberOfUsedLikeNewOffers']);
     array = array.reverse();
     let LNOULNO = array.filter((el, index) => !!el && index < 5).map(el => el['NumberOfUsedLikeNewOffers']);
-    let ANOULNO = array.map(el => el['NumberOfUsedLikeNewOffers']).reduce((a, b) => a + b, 0) / array.length;
+    let ANOULNO = array.length? array.map(el => el['NumberOfUsedLikeNewOffers']).reduce((a, b) => a + b, 0) / array.length: 0;
     ANOULNO = parseInt(ANOULNO * 10000) / 10000;
 
     array = [..._products];
     array = array.filter(el => !!el['Tier'])
     array.sort((a, b) => a['Tier'] < b['Tier']? 1: -1);
-    let HT = array.filter((el, index) => !!el && index < 5).map(el => el['Tier']);
+    let HT = array.filter((el, index) => !!el && index < 5).map(el => {
+        if(el['Tier'] === 0) return 'STANDARD';
+        else if(el['Tier'] === 1) return 'OVERSIZE';
+        else if(el['Tier'] === 2) return 'HEAVY';
+        else if(el['Tier'] === 3) return 'STANDARD_APPAREL';
+        else if(el['Tier'] === 4) return 'OVERSIZE_APPAREL';
+        else if(el['Tier'] === 5) return 'STANDARD_SHOES';
+        else if(el['Tier'] === 6) return 'OVERSIZE_SHOES';
+        return 'STANDARD';
+    });
     array = array.reverse();
-    let LT = array.filter((el, index) => !!el && index < 5).map(el => el['Tier']);
-    let AT = array.map(el => el['Tier']).reduce((a, b) => a + b, 0) / array.length;
-    AT = parseInt(AT * 10000) / 10000;
+    let LT = array.filter((el, index) => !!el && index < 5).map(el => {
+        if(el['Tier'] === 0) return 'STANDARD';
+        else if(el['Tier'] === 1) return 'OVERSIZE';
+        else if(el['Tier'] === 2) return 'HEAVY';
+        else if(el['Tier'] === 3) return 'STANDARD_APPAREL';
+        else if(el['Tier'] === 4) return 'OVERSIZE_APPAREL';
+        else if(el['Tier'] === 5) return 'STANDARD_SHOES';
+        else if(el['Tier'] === 6) return 'OVERSIZE_SHOES';
+        return 'STANDARD';
+    });
+ //   let AT = array.map(el => el['Tier']).reduce((a, b) => a + b, 0) / array.length;
+//    AT = parseInt(AT * 10000) / 10000;
 
     array = [..._products];
     array = array.filter(el => !!el['ProductGroup'])
@@ -305,7 +488,7 @@ exports.getResult = async(fc, from, to) => {
         { label: 'Average NumberOfUsedLikeNewOffer', array: [ANOULNO] },
         { label: 'Highest Tiers', array: HT },
         { label: 'Lowest Tiers', array: LT },
-        { label: 'Average Tier', array: [AT] },
+//        { label: 'Average Tier', array: [AT] },
         { label: 'Product Group', array: PRODUCT_GROUP.map(el => el['label']) },
         { label: 'Product Group Count', array: PRODUCT_GROUP.map(el => el['count']) },
         { label: 'Binding', array: BINDINGS.map(el => el['label']) },
